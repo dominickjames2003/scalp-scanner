@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#080912" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Scalp Scanner" />
+  <title>Scalp Scanner</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&display=swap');
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #080912; --surface: #0f1120; --surface2: #13152a;
+      --border: #1a1d2e; --text: #e8eaf6; --muted: #8b8fa8;
+      --green: #00ff88; --red: #ff6b6b; --yellow: #f5c842; --blue: #00c4ff; --purple: #c084fc;
+    }
+    body { font-family: 'IBM Plex Mono', monospace; background: var(--bg); color: var(--text); min-height: 100vh; min-height: -webkit-fill-available; overscroll-behavior: none; }
+    #app { max-width: 780px; margin: 0 auto; }
+    .header { background: linear-gradient(180deg, #0d0f1f 0%, var(--bg) 100%); border-bottom: 1px solid var(--border); padding: env(safe-area-inset-top, 16px) 16px 0; padding-top: max(env(safe-area-inset-top), 20px); position: sticky; top: 0; z-index: 100; }
+    .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .logo { display: flex; align-items: center; gap: 10px; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); transition: all 0.3s; }
+    .dot.live { background: var(--green); box-shadow: 0 0 8px var(--green); }
+    .dot.scanning { background: var(--yellow); box-shadow: 0 0 8px var(--yellow); animation: pulse 1s infinite; }
+    .dot.premarket { background: var(--purple); box-shadow: 0 0 8px var(--purple); }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+    .logo-text { font-size: 18px; font-weight: 800; color: #fff; letter-spacing: -0.03em; }
+    .logo-sub { font-size: 10px; color: var(--muted); margin-top: 2px; }
+    .scan-btn { background: linear-gradient(135deg, var(--green), var(--blue)); color: #080912; border: none; border-radius: 10px; padding: 10px 18px; font-size: 12px; font-weight: 800; cursor: pointer; font-family: inherit; letter-spacing: 0.05em; -webkit-tap-highlight-color: transparent; transition: opacity 0.2s; }
+    .scan-btn.purple { background: linear-gradient(135deg, var(--purple), #818cf8); color: #fff; }
+    .scan-btn:disabled { background: var(--surface2) !important; color: var(--muted) !important; cursor: not-allowed; }
+    .scan-btn:active { opacity: 0.8; }
+    .tabs { display: flex; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+    .tabs::-webkit-scrollbar { display: none; }
+    .tab { background: none; border: none; font-family: inherit; color: var(--muted); padding: 10px 14px; cursor: pointer; font-size: 11px; text-transform: uppercase; letter-spacing: 0.07em; border-bottom: 2px solid transparent; white-space: nowrap; -webkit-tap-highlight-color: transparent; }
+    .tab.active-calls { color: var(--green); border-bottom-color: var(--green); }
+    .tab.active-puts { color: var(--red); border-bottom-color: var(--red); }
+    .tab.active-prep { color: var(--purple); border-bottom-color: var(--purple); }
+    .content { padding: 16px 14px calc(env(safe-area-inset-bottom) + 24px); }
+    .empty { text-align: center; padding: 80px 20px; color: var(--muted); }
+    .empty .emoji { font-size: 48px; margin-bottom: 16px; }
+    .empty h2 { font-size: 16px; color: #fff; margin-bottom: 8px; }
+    .empty p { font-size: 12px; line-height: 1.8; max-width: 300px; margin: 0 auto; }
+    .empty .hours { margin-top: 20px; font-size: 11px; color: #444; line-height: 1.9; }
+    .loading { text-align: center; padding: 80px 20px; }
+    .loading .spin { font-size: 32px; display: inline-block; animation: spin 0.8s linear infinite; margin-bottom: 12px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading .prog { font-size: 13px; color: var(--green); }
+    .loading .prog.purple { color: var(--purple); }
+    .loading .sub { font-size: 11px; color: var(--muted); margin-top: 8px; }
+    .error-box { background: #1a0f0f; border: 1px solid #ff6b6b44; border-radius: 12px; padding: 18px; color: #ff9999; font-size: 12px; line-height: 1.8; }
+    .cards { display: flex; flex-direction: column; gap: 12px; }
+    .card { background: linear-gradient(135deg, #0f1120, #13152a); border: 1px solid var(--border); border-radius: 14px; padding: 16px; position: relative; overflow: hidden; }
+    .card .accent-bar { position: absolute; top: 0; left: 0; width: 3px; height: 100%; border-radius: 3px 0 0 3px; }
+    .card.high-score { border-color: rgba(0,255,136,0.25); }
+    .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+    .card-left { display: flex; align-items: center; gap: 10px; }
+    .rank { font-size: 18px; font-weight: 800; }
+    .ticker-name { font-size: 15px; font-weight: 700; color: #fff; }
+    .badge { font-size: 10px; padding: 2px 8px; border-radius: 10px; text-transform: uppercase; font-weight: 700; display: inline-block; margin-top: 3px; }
+    .badge.call { background: rgba(0,255,136,0.15); color: var(--green); }
+    .badge.put { background: rgba(255,107,107,0.15); color: var(--red); }
+    .strike-info { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .price-right { text-align: right; }
+    .ask-price { font-size: 20px; font-weight: 800; }
+    .ask-label { font-size: 10px; color: var(--muted); }
+    .score-row { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+    .score-track { flex: 1; height: 4px; background: #1a1d2e; border-radius: 2px; overflow: hidden; }
+    .score-fill { height: 100%; border-radius: 2px; }
+    .score-num { font-size: 11px; font-weight: 700; min-width: 28px; }
+    .greeks { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 10px; }
+    .greek-cell { background: #0a0b14; border-radius: 8px; padding: 7px 6px; text-align: center; }
+    .greek-label { font-size: 9px; color: var(--muted); margin-bottom: 3px; text-transform: uppercase; }
+    .greek-val { font-size: 12px; font-weight: 600; }
+    .entry-box { background: #0a0b14; border-radius: 8px; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; }
+    .entry-note { font-size: 11px; color: var(--muted); }
+    .entry-upside { font-size: 11px; font-weight: 600; }
+    .disclaimer { background: var(--surface); border-radius: 12px; border: 1px solid var(--border); padding: 14px 16px; margin-top: 12px; font-size: 10px; color: #444; line-height: 1.8; }
+    .scan-meta { font-size: 10px; color: var(--muted); margin-bottom: 10px; }
+    .prep-card { background: linear-gradient(135deg, #0f1120, #13152a); border: 1px solid var(--border); border-radius: 14px; padding: 16px; position: relative; overflow: hidden; margin-bottom: 12px; }
+    .prep-card .accent-bar { position: absolute; top: 0; left: 0; width: 3px; height: 100%; border-radius: 3px 0 0 3px; }
+    .prep-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .prep-ticker { font-size: 20px; font-weight: 800; color: #fff; }
+    .prep-close { font-size: 18px; font-weight: 800; }
+    .prep-change { font-size: 11px; margin-top: 2px; }
+    .prep-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
+    .prep-stat { background: #0a0b14; border-radius: 8px; padding: 8px; text-align: center; }
+    .prep-stat-label { font-size: 9px; color: var(--muted); text-transform: uppercase; margin-bottom: 4px; }
+    .prep-stat-val { font-size: 13px; font-weight: 700; }
+    .bias-box { border-radius: 8px; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; }
+    .bias-label { font-size: 11px; color: var(--muted); }
+    .bias-val { font-size: 13px; font-weight: 800; letter-spacing: 0.05em; }
+    .watch-note { margin-top: 10px; font-size: 11px; color: var(--muted); line-height: 1.7; background: #0a0b14; border-radius: 8px; padding: 8px 12px; }
+  </style>
+</head>
+<body>
+<div id="app">
+  <div class="header">
+    <div class="header-top">
+      <div class="logo">
+        <div class="dot" id="statusDot"></div>
+        <div>
+          <div class="logo-text">SCALP SCANNER</div>
+          <div class="logo-sub">SPY · QQQ · AAPL · NVDA · TSLA · META · MSFT · AMZN · AMD</div>
+        </div>
+      </div>
+      <button class="scan-btn" id="scanBtn" onclick="handleScanBtn()">⚡ SCAN</button>
+    </div>
+    <div class="tabs">
+      <button class="tab active-calls" id="tabCalls" onclick="switchTab('calls')">📈 Calls (<span id="callCount">0</span>)</button>
+      <button class="tab" id="tabPuts" onclick="switchTab('puts')">📉 Puts (<span id="putCount">0</span>)</button>
+      <button class="tab" id="tabPrep" onclick="switchTab('prep')">🌅 Morning Prep</button>
+    </div>
+  </div>
+  <div class="content" id="content">
+    <div class="empty">
+      <div class="emoji">🎯</div>
+      <h2>Ready to find your trades</h2>
+      <p>Hit SCAN during market hours for live setups, or tap Morning Prep to plan your day before the bell.</p>
+      <div class="hours">Live scan: 9:30am – 4:00pm ET<br/>Morning Prep: Available anytime</div>
+    </div>
+  </div>
+</div>
+<script>
+const API_KEY = "7kLZT_83pqVv0MBliKbrparZkp8lpMNE";
+const BASE = "https://api.polygon.io";
+const TICKERS = ["SPY","QQQ","AAPL","NVDA","TSLA","AMZN","META","MSFT","AMD"];
+let allCalls=[], allPuts=[], spotMap={}, lastScan=null, lastPrep=null, activeTab="calls", prepData=[];
+
+function scoreLongCall(c,spot){let s=0;const iv=c.implied_volatility||0,delta=c.greeks?.delta||0,vol=c.day?.volume||0,oi=c.details?.open_interest||0,strike=c.details?.strike_price||0,mono=(spot-strike)/spot;if(delta>=0.4&&delta<=0.7)s+=30;else if(delta>=0.3)s+=15;if(vol>5000)s+=25;else if(vol>1000)s+=15;else if(vol>500)s+=5;if(oi>5000)s+=20;else if(oi>1000)s+=10;if(iv>0.2&&iv<0.6)s+=15;else if(iv>=0.6&&iv<0.9)s+=5;if(mono>-0.03&&mono<0.01)s+=10;return s;}
+function scoreShortPut(c,spot){let s=0;const iv=c.implied_volatility||0,delta=c.greeks?.delta||0,vol=c.day?.volume||0,oi=c.details?.open_interest||0,strike=c.details?.strike_price||0,mono=(spot-strike)/spot;if(delta<=-0.2&&delta>=-0.4)s+=35;else if(delta<-0.1)s+=15;if(iv>0.4)s+=25;else if(iv>0.25)s+=15;else if(iv>0.15)s+=5;if(vol>3000)s+=20;else if(vol>1000)s+=12;else if(vol>300)s+=5;if(oi>5000)s+=15;else if(oi>1000)s+=8;if(mono>0.02&&mono<0.08)s+=5;return s;}
+
+async function fetchSpot(t){try{const r=await fetch(`${BASE}/v2/last/trade/${t}?apiKey=${API_KEY}`);const d=await r.json();return d.results?.p||null;}catch{return null;}}
+async function fetchChain(t){try{const today=new Date().toISOString().split(“T”)[0];const maxD=new Date();maxD.setDate(maxD.getDate()+5);const maxExp=maxD.toISOString().split(“T”)[0];const r=await fetch(`${BASE}/v3/snapshot/options/${t}?expiration_date.gte=${today}&expiration_date.lte=${maxExp}&limit=50&apiKey=${API_KEY}`);const d=await r.json();return d.results||[];}catch{return[];}}
+async function fetchPrev(t){try{const r=await fetch(`${BASE}/v2/aggs/ticker/${t}/prev?apiKey=${API_KEY}`);const d=await r.json();return d.results?.[0]||null;}catch{return null;}}
+
+async function runScan(){
+const btn=document.getElementById(“scanBtn”),dot=document.getElementById(“statusDot”);
+btn.disabled=true;dot.className=“dot scanning”;allCalls=[];allPuts=[];spotMap={};
+setContent(loadingHTML(“Starting scan…”,false));
+for(let i=0;i<TICKERS.length;i++){
+const t=TICKERS[i];setContent(loadingHTML(`Scanning ${t} (${i+1}/${TICKERS.length})...`,false));
+const spot=await fetchSpot(t);if(!spot)continue;spotMap[t]=spot;
+const chain=await fetchChain(t);
+for(const c of chain){const type=c.details?.contract_type;const score=type===“call”?scoreLongCall(c,spot):scoreShortPut(c,spot);if(score<20)continue;c._score=score;c._spot=spot;if(type===“call”)allCalls.push(c);else if(type===“put”)allPuts.push(c);}
+await new Promise(r=>setTimeout(r,120));
+}
+allCalls.sort((a,b)=>b._score-a._score);allPuts.sort((a,b)=>b._score-a._score);
+allCalls=allCalls.slice(0,5);allPuts=allPuts.slice(0,5);
+document.getElementById(“callCount”).textContent=allCalls.length;
+document.getElementById(“putCount”).textContent=allPuts.length;
+lastScan=new Date();btn.disabled=false;btn.textContent=“⚡ RESCAN”;btn.className=“scan-btn”;dot.className=“dot live”;
+renderTab();
+}
+
+async function runMorningPrep(){
+const btn=document.getElementById(“scanBtn”),dot=document.getElementById(“statusDot”);
+btn.disabled=true;dot.className=“dot scanning”;prepData=[];
+setContent(loadingHTML(“Loading yesterday’s data…”,true));
+for(let i=0;i<TICKERS.length;i++){
+const t=TICKERS[i];setContent(loadingHTML(`Analyzing ${t} (${i+1}/${TICKERS.length})...`,true));
+const bar=await fetchPrev(t);if(!bar)continue;
+const change=bar.c-bar.o,changePct=((change/bar.o)*100).toFixed(2),range=bar.h-bar.l,rangePct=((range/bar.o)*100).toFixed(2);
+let bias=“NEUTRAL”,biasColor=”#8b8fa8”,watchFor=””;
+if(parseFloat(changePct)>1.0){bias=“BULLISH 📈”;biasColor=”#00ff88”;watchFor=“Momentum continuing up. Watch for call entries near open. Look for pullback to VWAP then bounce.”;}
+else if(parseFloat(changePct)<-1.0){bias=“BEARISH 📉”;biasColor=”#ff6b6b”;watchFor=“Downside pressure from yesterday. Watch for put entries on dead-cat bounce rejection. Gap fill potential.”;}
+else if(parseFloat(rangePct)>2.5){bias=“VOLATILE ⚡”;biasColor=”#f5c842”;watchFor=“Wide range day yesterday — expect more volatility. Both directions in play. Wait for first 15min candle before entry.”;}
+else{bias=“CHOPPY 😴”;biasColor=”#8b8fa8”;watchFor=“Low conviction day. Avoid unless you see a clean setup after 10am. Patience over forcing trades.”;}
+prepData.push({ticker:t,close:bar.c,open:bar.o,high:bar.h,low:bar.l,vol:bar.v,changePct,rangePct,bias,biasColor,watchFor});
+await new Promise(r=>setTimeout(r,80));
+}
+prepData.sort((a,b)=>Math.abs(parseFloat(b.changePct))-Math.abs(parseFloat(a.changePct)));
+lastPrep=new Date();btn.disabled=false;btn.textContent=“🌅 REFRESH”;btn.className=“scan-btn purple”;dot.className=“dot premarket”;
+renderTab();
+}
+
+function handleScanBtn(){if(activeTab===“prep”)runMorningPrep();else runScan();}
+
+function switchTab(tab){
+activeTab=tab;
+document.getElementById(“tabCalls”).className=“tab”+(tab===“calls”?” active-calls”:””);
+document.getElementById(“tabPuts”).className=“tab”+(tab===“puts”?” active-puts”:””);
+document.getElementById(“tabPrep”).className=“tab”+(tab===“prep”?” active-prep”:””);
+const btn=document.getElementById(“scanBtn”);
+if(tab===“prep”){btn.textContent=lastPrep?“🌅 REFRESH”:“🌅 PREP”;btn.className=“scan-btn purple”;}
+else{btn.textContent=lastScan?“⚡ RESCAN”:“⚡ SCAN”;btn.className=“scan-btn”;}
+renderTab();
+}
+
+function renderTab(){
+if(activeTab===“prep”){renderPrep();return;}
+const contracts=activeTab===“calls”?allCalls:allPuts,type=activeTab===“calls”?“call”:“put”;
+if(contracts.length===0){
+if(lastScan){setContent(`<div class="error-box">⚠️ No contracts found. Market may be closed — try 9:30am–4pm ET.</div>`);return;}
+setContent(`<div class="empty"><div class="emoji">🎯</div><h2>Ready to find your trades</h2><p>Hit SCAN during market hours to surface top 5 scalp setups. Or tap 🌅 Morning Prep to plan before the bell.</p><div class="hours">Live scan: 9:30am – 4:00pm ET</div></div>`);return;
+}
+const meta=lastScan?`<div class="scan-meta">Last scan: ${lastScan.toLocaleTimeString()} · ${contracts.length} setups found</div>`:””;
+setContent(meta+`<div class="cards">${contracts.map((c,i)=>cardHTML(c,type,i)).join("")}</div><div class="disclaimer">⚠️ <strong style="color:#8b8fa8">Not financial advice.</strong> Max risk &lt;$10k account: $200–300/contract.</div>`);
+}
+
+function renderPrep(){
+if(prepData.length===0){
+setContent(`<div class="empty"><div class="emoji">🌅</div><h2>Morning Prep</h2><p>Tap PREP to load yesterday's price action. Know your bias on every ticker before the bell rings at 9:30.</p><div class="hours">Uses prior day closing data · Available anytime<br/>Run the night before or morning of</div></div>`);return;
+}
+const rankColors=[”#ffd700”,”#c0c0c0”,”#cd7f32”,”#8b8fa8”,”#8b8fa8”,”#8b8fa8”,”#8b8fa8”,”#8b8fa8”,”#8b8fa8”];
+const meta=lastPrep?`<div class="scan-meta" style="color:var(--purple)">Prep loaded: ${lastPrep.toLocaleTimeString()} · prior day data · ${prepData.length} tickers</div>`:””;
+const cards=prepData.map((d,i)=>{
+const isUp=parseFloat(d.changePct)>0,changeColor=isUp?”#00ff88”:parseFloat(d.changePct)<0?”#ff6b6b”:”#8b8fa8”;
+return `<div class="prep-card"> <div class="accent-bar" style="background:${d.biasColor}"></div> <div class="prep-header"> <div style="display:flex;align-items:center;gap:10px"><span class="rank" style="color:${rankColors[i]}">#${i+1}</span><div class="prep-ticker">${d.ticker}</div></div> <div class="price-right"><div class="prep-close" style="color:${changeColor}">$${d.close.toFixed(2)}</div><div class="prep-change" style="color:${changeColor}">${isUp?'+':''}${d.changePct}% yesterday</div></div> </div> <div class="prep-grid"> <div class="prep-stat"><div class="prep-stat-label">Prev Open</div><div class="prep-stat-val">$${d.open.toFixed(2)}</div></div> <div class="prep-stat"><div class="prep-stat-label">Day Range</div><div class="prep-stat-val">${d.rangePct}%</div></div> <div class="prep-stat"><div class="prep-stat-label">Volume</div><div class="prep-stat-val">${(d.vol/1e6).toFixed(1)}M</div></div> </div> <div class="bias-box" style="background:${d.biasColor}18;border:1px solid ${d.biasColor}33"><span class="bias-label">Today's Bias</span><span class="bias-val" style="color:${d.biasColor}">${d.bias}</span></div> <div class="watch-note">🎯 ${d.watchFor}</div> </div>`;
+}).join(””);
+setContent(meta+cards+`<div class="disclaimer">⚠️ Bias based on prior day price action only. Always confirm with first 5-min candle at open before entering.</div>`);
+}
+
+function cardHTML(c,type,rank){
+const isCall=type===“call”,accent=isCall?”#00ff88”:”#ff6b6b”;
+const rankColors=[”#ffd700”,”#c0c0c0”,”#cd7f32”,”#8b8fa8”,”#8b8fa8”];
+const strike=c.details?.strike_price,exp=c.details?.expiration_date,ticker=c.details?.underlying_ticker||”—”;
+const iv=c.implied_volatility?(c.implied_volatility*100).toFixed(1)+”%”:”—”,delta=c.greeks?.delta?.toFixed(3)||”—”,theta=c.greeks?.theta?.toFixed(3)||”—”,vol=c.day?.volume?.toLocaleString()||”—”,ask=parseFloat(c.day?.close||0).toFixed(2);
+const daysOut=exp?Math.round((new Date(exp)-new Date())/86400000):”?”,score=c._score||0,scoreColor=score>=70?”#00ff88”:score>=50?”#f5c842”:”#ff6b6b”;
+const n=Math.max(1,Math.floor(9000/(parseFloat(ask)*100))),cost=(parseFloat(ask)*100).toFixed(0);
+return `<div class="card ${score>=70?'high-score':''}"><div class="accent-bar" style="background:${accent}"></div> <div class="card-header"><div class="card-left"><span class="rank" style="color:${rankColors[rank]}">#${rank+1}</span><div><div class="ticker-name">${ticker} <span class="badge ${isCall?'call':'put'}">${isCall?'LONG CALL':'SHORT PUT'}</span></div><div class="strike-info">$${strike} strike · ${daysOut} DTE · exp ${exp}</div></div></div> <div class="price-right"><div class="ask-price" style="color:${accent}">$${ask}</div><div class="ask-label">ask</div></div></div> <div class="score-row"><div class="score-track"><div class="score-fill" style="width:${Math.min(100,score)}%;background:${scoreColor}"></div></div><span class="score-num" style="color:${scoreColor}">${score}</span></div> <div class="greeks"><div class="greek-cell"><div class="greek-label">IV</div><div class="greek-val">${iv}</div></div><div class="greek-cell"><div class="greek-label">Delta</div><div class="greek-val" style="color:${parseFloat(delta)>=0?'#00ff88':'#ff6b6b'}">${delta}</div></div><div class="greek-cell"><div class="greek-label">Theta</div><div class="greek-val" style="color:#ff6b6b">${theta}</div></div><div class="greek-cell"><div class="greek-label">Vol</div><div class="greek-val">${vol}</div></div></div> <div class="entry-box"><span class="entry-note">${isCall?`Buy ${n} contract(s) ~$${cost}/ea`:`Sell put, collect $${cost}/contract`}</span><span class="entry-upside" style="color:${accent}">${isCall?'Unlimited upside':`Keep $${cost} premium`}</span></div></div>`;
+}
+
+function loadingHTML(msg,purple){return `<div class="loading"><div class="spin">${purple?'🌅':'⚡'}</div><div class="prog ${purple?'purple':''}">${msg}</div><div class="sub">${purple?'Pulling prior day data · calculating bias · ranking movers':'Fetching live chains · scoring setups · ranking by probability'}</div></div>`;}
+function setContent(html){document.getElementById(“content”).innerHTML=html;}
+if(‘serviceWorker’ in navigator){navigator.serviceWorker.register(’/sw.js’).catch(()=>{});}
+</script>
+
+</body>
+</html>
