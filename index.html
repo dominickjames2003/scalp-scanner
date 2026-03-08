@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#080912" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Scalp Scanner" />
+  <title>Scalp Scanner</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&display=swap');
+    *{box-sizing:border-box;margin:0;padding:0}
+    :root{--bg:#080912;--surface:#0f1120;--border:#1a1d2e;--text:#e8eaf6;--muted:#8b8fa8;--green:#00ff88;--red:#ff6b6b;--yellow:#f5c842;--blue:#00c4ff;--purple:#c084fc}
+    body{font-family:'IBM Plex Mono',monospace;background:var(--bg);color:var(--text);min-height:100vh;overscroll-behavior:none}
+    #app{max-width:780px;margin:0 auto}
+    .header{background:linear-gradient(180deg,#0d0f1f,var(--bg));border-bottom:1px solid var(--border);padding:20px 16px 0;position:sticky;top:0;z-index:100}
+    .header-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+    .logo{display:flex;align-items:center;gap:10px}
+    .dot{width:8px;height:8px;border-radius:50%;background:var(--muted);transition:all .3s}
+    .dot.live{background:var(--green);box-shadow:0 0 8px var(--green)}
+    .dot.scanning{background:var(--yellow);box-shadow:0 0 8px var(--yellow);animation:pulse 1s infinite}
+    .dot.premarket{background:var(--purple);box-shadow:0 0 8px var(--purple)}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+    .logo-text{font-size:18px;font-weight:800;color:#fff;letter-spacing:-.03em}
+    .logo-sub{font-size:10px;color:var(--muted);margin-top:2px}
+    .scan-btn{background:linear-gradient(135deg,var(--green),var(--blue));color:#080912;border:none;border-radius:10px;padding:10px 18px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;letter-spacing:.05em}
+    .scan-btn.purple{background:linear-gradient(135deg,var(--purple),#818cf8);color:#fff}
+    .scan-btn:disabled{background:#1a1d2e!important;color:var(--muted)!important;cursor:not-allowed}
+    .tabs{display:flex;overflow-x:auto;scrollbar-width:none}
+    .tabs::-webkit-scrollbar{display:none}
+    .tab{background:none;border:none;font-family:inherit;color:var(--muted);padding:10px 14px;cursor:pointer;font-size:11px;text-transform:uppercase;letter-spacing:.07em;border-bottom:2px solid transparent;white-space:nowrap}
+    .tab.ac{color:var(--green);border-bottom-color:var(--green)}
+    .tab.ap{color:var(--red);border-bottom-color:var(--red)}
+    .tab.am{color:var(--purple);border-bottom-color:var(--purple)}
+    .content{padding:16px 14px 40px}
+    .empty{text-align:center;padding:80px 20px;color:var(--muted)}
+    .empty .emoji{font-size:48px;margin-bottom:16px}
+    .empty h2{font-size:16px;color:#fff;margin-bottom:8px}
+    .empty p{font-size:12px;line-height:1.8;max-width:300px;margin:0 auto}
+    .empty .hours{margin-top:20px;font-size:11px;color:#444;line-height:1.9}
+    .loading{text-align:center;padding:80px 20px}
+    .spin{font-size:32px;display:inline-block;animation:spin .8s linear infinite;margin-bottom:12px}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .prog{font-size:13px;color:var(--green)}
+    .prog.p{color:var(--purple)}
+    .sub{font-size:11px;color:var(--muted);margin-top:8px}
+    .err{background:#1a0f0f;border:1px solid #ff6b6b44;border-radius:12px;padding:18px;color:#ff9999;font-size:12px;line-height:1.8}
+    .cards{display:flex;flex-direction:column;gap:12px}
+    .card{background:linear-gradient(135deg,#0f1120,#13152a);border:1px solid var(--border);border-radius:14px;padding:16px;position:relative;overflow:hidden}
+    .abar{position:absolute;top:0;left:0;width:3px;height:100%;border-radius:3px 0 0 3px}
+    .card.hs{border-color:rgba(0,255,136,.25)}
+    .ch{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px}
+    .cl{display:flex;align-items:center;gap:10px}
+    .rnk{font-size:18px;font-weight:800}
+    .tn{font-size:15px;font-weight:700;color:#fff}
+    .bdg{font-size:10px;padding:2px 8px;border-radius:10px;text-transform:uppercase;font-weight:700;display:inline-block;margin-top:3px}
+    .bdg.c{background:rgba(0,255,136,.15);color:var(--green)}
+    .bdg.p{background:rgba(255,107,107,.15);color:var(--red)}
+    .si{font-size:11px;color:var(--muted);margin-top:2px}
+    .pr{text-align:right}
+    .ap{font-size:20px;font-weight:800}
+    .al{font-size:10px;color:var(--muted)}
+    .sr{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+    .st{flex:1;height:4px;background:#1a1d2e;border-radius:2px;overflow:hidden}
+    .sf{height:100%;border-radius:2px}
+    .sn{font-size:11px;font-weight:700;min-width:28px}
+    .gk{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px}
+    .gc{background:#0a0b14;border-radius:8px;padding:7px 6px;text-align:center}
+    .gl{font-size:9px;color:var(--muted);margin-bottom:3px;text-transform:uppercase}
+    .gv{font-size:12px;font-weight:600}
+    .eb{background:#0a0b14;border-radius:8px;padding:8px 12px;display:flex;justify-content:space-between;align-items:center}
+    .en{font-size:11px;color:var(--muted)}
+    .eu{font-size:11px;font-weight:600}
+    .disc{background:var(--surface);border-radius:12px;border:1px solid var(--border);padding:14px 16px;margin-top:12px;font-size:10px;color:#444;line-height:1.8}
+    .meta{font-size:10px;color:var(--muted);margin-bottom:10px}
+    .pc{background:linear-gradient(135deg,#0f1120,#13152a);border:1px solid var(--border);border-radius:14px;padding:16px;position:relative;overflow:hidden;margin-bottom:12px}
+    .ph{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+    .pt{font-size:20px;font-weight:800;color:#fff}
+    .pg{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+    .ps{background:#0a0b14;border-radius:8px;padding:8px;text-align:center}
+    .psl{font-size:9px;color:var(--muted);text-transform:uppercase;margin-bottom:4px}
+    .psv{font-size:13px;font-weight:700}
+    .bb{border-radius:8px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center}
+    .bl{font-size:11px;color:var(--muted)}
+    .bv{font-size:13px;font-weight:800;letter-spacing:.05em}
+    .wn{margin-top:10px;font-size:11px;color:var(--muted);line-height:1.7;background:#0a0b14;border-radius:8px;padding:8px 12px}
+  </style>
+</head>
+<body>
+<div id="app">
+  <div class="header">
+    <div class="header-top">
+      <div class="logo">
+        <div class="dot" id="dot"></div>
+        <div>
+          <div class="logo-text">SCALP SCANNER</div>
+          <div class="logo-sub">SPY · QQQ · AAPL · NVDA · TSLA · META · MSFT · AMZN · AMD</div>
+        </div>
+      </div>
+      <button class="scan-btn" id="btn" onclick="handleBtn()">⚡ SCAN</button>
+    </div>
+    <div class="tabs">
+      <button class="tab ac" id="t1" onclick="go('calls')">📈 Calls (<span id="cc">0</span>)</button>
+      <button class="tab" id="t2" onclick="go('puts')">📉 Puts (<span id="pc2">0</span>)</button>
+      <button class="tab" id="t3" onclick="go('prep')">🌅 Morning Prep</button>
+    </div>
+  </div>
+  <div class="content" id="content">
+    <div class="empty">
+      <div class="emoji">🎯</div>
+      <h2>Ready to find your trades</h2>
+      <p>Hit SCAN during market hours, or tap Morning Prep to plan before the bell.</p>
+      <div class="hours">Live scan: 9:30am – 4:00pm ET<br/>Morning Prep: Anytime</div>
+    </div>
+  </div>
+</div>
+<script>
+var KEY="7kLZT_83pqVv0MBliKbrparZkp8lpMNE",BASE="https://api.polygon.io";
+var TK=["SPY","QQQ","AAPL","NVDA","TSLA","AMZN","META","MSFT","AMD"];
+var calls=[],puts=[],lastScan=null,lastPrep=null,tab="calls",prep=[];
+
+function sc(h){document.getElementById(“content”).innerHTML=h;}
+function lh(m,p){return ‘<div class="loading"><div class="spin">’+(p?“🌅”:“⚡”)+’</div><div class=“prog’+(p?” p”:””)+’”>’+m+’</div><div class="sub">’+(p?“Pulling prior day data · calculating bias”:“Fetching live chains · scoring setups”)+’</div></div>’;}
+
+function sco(c,spot,type){
+var s=0,iv=c.implied_volatility||0,d=(c.greeks&&c.greeks.delta)||0,v=(c.day&&c.day.volume)||0,oi=(c.details&&c.details.open_interest)||0,k=(c.details&&c.details.strike_price)||0,m=(spot-k)/spot;
+if(type===“call”){if(d>=0.4&&d<=0.7)s+=30;else if(d>=0.3)s+=15;if(v>5000)s+=25;else if(v>1000)s+=15;else if(v>500)s+=5;if(oi>5000)s+=20;else if(oi>1000)s+=10;if(iv>0.2&&iv<0.6)s+=15;else if(iv>=0.6)s+=5;if(m>-0.03&&m<0.01)s+=10;}
+else{if(d<=-0.2&&d>=-0.4)s+=35;else if(d<-0.1)s+=15;if(iv>0.4)s+=25;else if(iv>0.25)s+=15;else if(iv>0.15)s+=5;if(v>3000)s+=20;else if(v>1000)s+=12;else if(v>300)s+=5;if(oi>5000)s+=15;else if(oi>1000)s+=8;if(m>0.02&&m<0.08)s+=5;}
+return s;
+}
+
+function get(url){return fetch(url).then(function(r){return r.json();}).catch(function(){return{};});}
+
+function scanNext(i,allC,allP,spots,done){
+if(i>=TK.length){done(allC,allP,spots);return;}
+var t=TK[i];sc(lh(“Scanning “+t+” (”+(i+1)+”/”+TK.length+”)…”,false));
+get(BASE+”/v2/last/trade/”+t+”?apiKey=”+KEY).then(function(d){
+var spot=d.results&&d.results.p?d.results.p:null;
+if(!spot){setTimeout(function(){scanNext(i+1,allC,allP,spots,done);},120);return;}
+spots[t]=spot;
+var today=new Date().toISOString().split(“T”)[0];
+var maxD=new Date();maxD.setDate(maxD.getDate()+5);
+var maxE=maxD.toISOString().split(“T”)[0];
+get(BASE+”/v3/snapshot/options/”+t+”?expiration_date.gte=”+today+”&expiration_date.lte=”+maxE+”&limit=50&apiKey=”+KEY).then(function(d2){
+var res=d2.results||[];
+for(var j=0;j<res.length;j++){
+var c=res[j],type=c.details&&c.details.contract_type,sc2=sco(c,spot,type);
+if(sc2<20)continue;c._score=sc2;
+if(type===“call”)allC.push(c);else if(type===“put”)allP.push(c);
+}
+setTimeout(function(){scanNext(i+1,allC,allP,spots,done);},120);
+});
+});
+}
+
+function prepNext(i,arr,done){
+if(i>=TK.length){done(arr);return;}
+var t=TK[i];sc(lh(“Analyzing “+t+” (”+(i+1)+”/”+TK.length+”)…”,true));
+get(BASE+”/v2/aggs/ticker/”+t+”/prev?apiKey=”+KEY).then(function(d){
+var bar=d.results&&d.results[0];
+if(!bar){setTimeout(function(){prepNext(i+1,arr,done);},80);return;}
+var cp=((bar.c-bar.o)/bar.o*100).toFixed(2),rp=((bar.h-bar.l)/bar.o*100).toFixed(2);
+var bias,bc,wf;
+if(parseFloat(cp)>1){bias=“BULLISH 📈”;bc=”#00ff88”;wf=“Momentum up. Watch for call entries near open. Look for VWAP pullback then bounce.”;}
+else if(parseFloat(cp)<-1){bias=“BEARISH 📉”;bc=”#ff6b6b”;wf=“Downside pressure. Watch for put entries on bounce rejection. Gap fill potential.”;}
+else if(parseFloat(rp)>2.5){bias=“VOLATILE ⚡”;bc=”#f5c842”;wf=“Wide range yesterday. Both directions in play. Wait for first 15min candle before entry.”;}
+else{bias=“CHOPPY 😴”;bc=”#8b8fa8”;wf=“Low conviction. Avoid unless clean setup after 10am. Patience over forcing trades.”;}
+arr.push({t:t,c:bar.c,o:bar.o,h:bar.h,l:bar.l,v:bar.v,cp:cp,rp:rp,bias:bias,bc:bc,wf:wf});
+setTimeout(function(){prepNext(i+1,arr,done);},80);
+});
+}
+
+function handleBtn(){
+if(tab===“prep”)doPrep();else doScan();
+}
+
+function doScan(){
+var btn=document.getElementById(“btn”),dot=document.getElementById(“dot”);
+btn.disabled=true;dot.className=“dot scanning”;calls=[];puts=[];
+sc(lh(“Starting scan…”,false));
+scanNext(0,[],[],{},function(aC,aP,sp){
+aC.sort(function(a,b){return b._score-a._score;});
+aP.sort(function(a,b){return b._score-a._score;});
+calls=aC.slice(0,5);puts=aP.slice(0,5);
+document.getElementById(“cc”).textContent=calls.length;
+document.getElementById(“pc2”).textContent=puts.length;
+lastScan=new Date();btn.disabled=false;btn.textContent=“⚡ RESCAN”;btn.className=“scan-btn”;dot.className=“dot live”;
+render();
+});
+}
+
+function doPrep(){
+var btn=document.getElementById(“btn”),dot=document.getElementById(“dot”);
+btn.disabled=true;dot.className=“dot scanning”;prep=[];
+sc(lh(“Loading yesterday’s data…”,true));
+prepNext(0,[],function(arr){
+arr.sort(function(a,b){return Math.abs(parseFloat(b.cp))-Math.abs(parseFloat(a.cp));});
+prep=arr;lastPrep=new Date();
+btn.disabled=false;btn.textContent=“🌅 REFRESH”;btn.className=“scan-btn purple”;dot.className=“dot premarket”;
+render();
+});
+}
+
+function go(t){
+tab=t;
+document.getElementById(“t1”).className=“tab”+(t===“calls”?” ac”:””);
+document.getElementById(“t2”).className=“tab”+(t===“puts”?” ap”:””);
+document.getElementById(“t3”).className=“tab”+(t===“prep”?” am”:””);
+var btn=document.getElementById(“btn”);
+if(t===“prep”){btn.textContent=lastPrep?“🌅 REFRESH”:“🌅 PREP”;btn.className=“scan-btn purple”;}
+else{btn.textContent=lastScan?“⚡ RESCAN”:“⚡ SCAN”;btn.className=“scan-btn”;}
+render();
+}
+
+function render(){
+if(tab===“prep”){renderPrep();return;}
+var list=tab===“calls”?calls:puts,type=tab===“calls”?“call”:“put”;
+if(!list.length){
+sc(lastScan?’<div class="err">No contracts found. Market may be closed. Try 9:30am-4pm ET.</div>’:’<div class="empty"><div class="emoji">🎯</div><h2>Ready to scan</h2><p>Hit SCAN during market hours or tap Morning Prep.</p><div class="hours">9:30am – 4:00pm ET</div></div>’);
+return;
+}
+var m=lastScan?’<div class="meta">Last scan: ‘+lastScan.toLocaleTimeString()+’ · ‘+list.length+’ setups</div>’:””,h=””;
+for(var i=0;i<list.length;i++)h+=crd(list[i],type,i);
+sc(m+’<div class="cards">’+h+’</div><div class="disc">Not financial advice. Max risk: $200-300/contract.</div>’);
+}
+
+function renderPrep(){
+if(!prep.length){sc(’<div class="empty"><div class="emoji">🌅</div><h2>Morning Prep</h2><p>Tap PREP to load yesterday's price action and get your bias before the bell.</p><div class="hours">Uses prior day data · Available anytime</div></div>’);return;}
+var rc=[”#ffd700”,”#c0c0c0”,”#cd7f32”,”#8b8fa8”,”#8b8fa8”,”#8b8fa8”,”#8b8fa8”,”#8b8fa8”,”#8b8fa8”];
+var m=lastPrep?’<div class="meta" style="color:var(--purple)">Prep: ‘+lastPrep.toLocaleTimeString()+’ · ‘+prep.length+’ tickers</div>’:””,h=””;
+for(var i=0;i<prep.length;i++){
+var d=prep[i],up=parseFloat(d.cp)>0,cc=up?”#00ff88”:parseFloat(d.cp)<0?”#ff6b6b”:”#8b8fa8”;
+h+=’<div class="pc"><div class="abar" style="background:'+d.bc+'"></div><div class="ph"><div style="display:flex;align-items:center;gap:10px"><span class="rnk" style="color:'+rc[i]+'">#’+(i+1)+’</span><div class="pt">’+d.t+’</div></div><div class="pr"><div style="font-size:18px;font-weight:800;color:'+cc+'">$’+d.c.toFixed(2)+’</div><div style="font-size:11px;color:'+cc+'">’+(up?”+”:””)+d.cp+”% yesterday</div></div></div>”
++’<div class="pg"><div class="ps"><div class="psl">Prev Open</div><div class="psv">$’+d.o.toFixed(2)+’</div></div><div class="ps"><div class="psl">Range</div><div class="psv">’+d.rp+’%</div></div><div class="ps"><div class="psl">Volume</div><div class="psv">’+(d.v/1e6).toFixed(1)+‘M</div></div></div>’
++’<div class="bb" style="background:'+d.bc+'18;border:1px solid '+d.bc+'33"><span class="bl">Today's Bias</span><span class="bv" style="color:'+d.bc+'">’+d.bias+’</span></div><div class="wn">🎯 ‘+d.wf+’</div></div>’;
+}
+sc(m+h+’<div class="disc">Bias based on prior day only. Confirm with first 5-min candle at open.</div>’);
+}
+
+function crd(c,type,rank){
+var isC=type===“call”,ac=isC?”#00ff88”:”#ff6b6b”,rc=[”#ffd700”,”#c0c0c0”,”#cd7f32”,”#8b8fa8”,”#8b8fa8”];
+var k=c.details&&c.details.strike_price,ex=c.details&&c.details.expiration_date,tk=(c.details&&c.details.underlying_ticker)||”—”;
+var iv=c.implied_volatility?(c.implied_volatility*100).toFixed(1)+”%”:”—”,dl=c.greeks&&c.greeks.delta?c.greeks.delta.toFixed(3):”—”,th=c.greeks&&c.greeks.theta?c.greeks.theta.toFixed(3):”—”,vl=c.day&&c.day.volume?c.day.volume.toLocaleString():”—”,ask=parseFloat((c.day&&c.day.close)||0).toFixed(2);
+var dte=ex?Math.round((new Date(ex)-new Date())/86400000):”?”,sc=c._score||0,scc=sc>=70?”#00ff88”:sc>=50?”#f5c842”:”#ff6b6b”;
+var n=Math.max(1,Math.floor(9000/(parseFloat(ask)*100))),cost=(parseFloat(ask)*100).toFixed(0);
+return ‘<div class=“card’+(sc>=70?” hs”:””)+’”><div class="abar" style="background:'+ac+'"></div>’
++’<div class="ch"><div class="cl"><span class="rnk" style="color:'+rc[rank]+'">#’+(rank+1)+’</span><div><div class="tn">’+tk+’ <span class=“bdg ‘+(isC?“c”:“p”)+’”>’+(isC?“LONG CALL”:“SHORT PUT”)+’</span></div><div class="si">$’+k+’ · ‘+dte+’ DTE · ‘+ex+’</div></div></div>’
++’<div class="pr"><div class="ap" style="color:'+ac+'">$’+ask+’</div><div class="al">ask</div></div></div>’
++’<div class="sr"><div class="st"><div class="sf" style="width:'+Math.min(100,sc)+'%;background:'+scc+'"></div></div><span class="sn" style="color:'+scc+'">’+sc+’</span></div>’
++’<div class="gk"><div class="gc"><div class="gl">IV</div><div class="gv">’+iv+’</div></div><div class="gc"><div class="gl">Delta</div><div class=“gv” style=“color:’+(parseFloat(dl)>=0?”#00ff88”:”#ff6b6b”)+’”>’+dl+’</div></div><div class="gc"><div class="gl">Theta</div><div class="gv" style="color:#ff6b6b">’+th+’</div></div><div class="gc"><div class="gl">Vol</div><div class="gv">’+vl+’</div></div></div>’
++’<div class="eb"><span class="en">’+(isC?“Buy “+n+” contract(s) ~$”+cost+”/ea”:“Sell put, collect $”+cost+”/contract”)+’</span><span class="eu" style="color:'+ac+'">’+(isC?“Unlimited upside”:“Keep $”+cost+” premium”)+’</span></div></div>’;
+}
+</script>
+
+</body>
+</html>
